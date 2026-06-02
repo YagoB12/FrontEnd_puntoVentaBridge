@@ -7,10 +7,16 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/common';
 import { formatCurrency, formatDate, formatPhoneNumber } from '@/utils/formatters';
-import { mockOrders } from '@/data/mockData';
 import { Search, Filter, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
-import type { OrderStatus, PaymentStatus } from '@/types';
+import { useEffect } from 'react';
+import { orderService } from '@/services/orderService';
+import type {
+  Order,
+  OrderStatus,
+  PaymentStatus
+} from '@/types';
+
 
 const statusFilters: { value: OrderStatus | 'all'; label: string }[] = [
   { value: 'all', label: 'Todas' },
@@ -35,14 +41,40 @@ export default function OrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const filteredOrders = mockOrders.filter((order) => {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadOrders();
+  }, []);
+
+  const loadOrders = async () => {
+
+    setLoading(true);
+
+    const response = await orderService.getOrders();
+
+    if (response.success && response.data) {
+      setOrders(response.data);
+    }
+
+    setLoading(false);
+  };
+
+  const filteredOrders = orders.filter((order) => {
+
     const matchesSearch =
       !searchQuery ||
-      order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customerName?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
-    const matchesPayment = paymentFilter === 'all' || order.paymentStatus === paymentFilter;
-    return matchesSearch && matchesStatus && matchesPayment;
+      order.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.id.toString().includes(searchQuery);
+
+    const backendStatus = order.status.toLowerCase();
+
+    const matchesStatus =
+      statusFilter === 'all' ||
+      backendStatus === statusFilter;
+
+    return matchesSearch && matchesStatus;
   });
 
   const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
@@ -50,6 +82,17 @@ export default function OrdersPage() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+
+  // LOADING
+  if (loading) {
+    return (
+      <MainLayout title="Gestión de Órdenes">
+        <div className="flex items-center justify-center h-96">
+          <p>Cargando órdenes...</p>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout title="Gestión de Órdenes">
@@ -146,14 +189,17 @@ export default function OrdersPage() {
                       className="border-b border-border hover:bg-muted/50 transition-colors"
                     >
                       <td className="py-4 px-4">
-                        <span className="font-medium">{order.orderNumber}</span>
+                        <span className="font-medium">#{order.id}</span>
                       </td>
                       <td className="py-4 px-4">
                         <div>
-                          <p className="font-medium">{order.customerName || 'N/A'}</p>
-                          {order.customerPhone && (
+                          <p className="font-medium">
+                            {order.customerName}
+                          </p>
+
+                          {order.phone && (
                             <p className="text-sm text-muted-foreground">
-                              {formatPhoneNumber(order.customerPhone)}
+                              {formatPhoneNumber(order.phone)}
                             </p>
                           )}
                         </div>
@@ -162,13 +208,17 @@ export default function OrdersPage() {
                         {formatDate(order.createdAt)}
                       </td>
                       <td className="py-4 px-4">
-                        <span className="font-semibold">{formatCurrency(order.total)}</span>
+                        <span className="font-semibold">{formatCurrency(order.amount)}</span>
                       </td>
                       <td className="py-4 px-4">
-                        <StatusBadge status={order.status} />
+                        <StatusBadge
+                          status={order.status.toLowerCase() as OrderStatus}
+                        />
                       </td>
                       <td className="py-4 px-4">
-                        <StatusBadge status={order.paymentStatus} />
+                        <StatusBadge
+                          status={order.status.toLowerCase() as any}
+                        />
                       </td>
                       <td className="py-4 px-4 text-right">
                         <Link href={`/orders/${order.id}`}>

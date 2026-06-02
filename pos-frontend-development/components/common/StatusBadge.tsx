@@ -7,34 +7,57 @@ interface StatusBadgeProps {
 }
 
 const statusConfig: Record<string, { label: string; className: string }> = {
+
   pending: {
     label: 'Pendiente',
     className: 'bg-warning/15 text-warning border-warning/30',
   },
+
+  paid: {
+    label: 'Pagado',
+    className: 'bg-success/15 text-success border-success/30',
+  },
+
   approved: {
     label: 'Aprobado',
     className: 'bg-success/15 text-success border-success/30',
   },
+
   rejected: {
     label: 'Rechazado',
     className: 'bg-destructive/15 text-destructive border-destructive/30',
   },
+
+  suspected: {
+    label: 'Sospechoso',
+    className: 'bg-warning/15 text-warning border-warning/30',
+  },
+
+  expired: {
+    label: 'Expirado',
+    className: 'bg-muted text-muted-foreground border-border',
+  },
+
   manual_review: {
     label: 'Revisión Manual',
     className: 'bg-info/15 text-info border-info/30',
   },
+
   processing: {
     label: 'Procesando',
     className: 'bg-info/15 text-info border-info/30',
   },
+
   completed: {
     label: 'Completado',
     className: 'bg-success/15 text-success border-success/30',
   },
+
   cancelled: {
     label: 'Cancelado',
     className: 'bg-muted text-muted-foreground border-border',
   },
+
   refunded: {
     label: 'Reembolsado',
     className: 'bg-muted text-muted-foreground border-border',

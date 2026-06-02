@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/common';
 import { formatCurrency, formatDate, formatPhoneNumber } from '@/utils/formatters';
-import { mockPayments } from '@/data/mockData';
+import { useEffect } from 'react';
+import { paymentService } from '@/services/paymentService';
 import { Search, Filter, Eye, CheckCircle, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { PaymentStatus } from '@/types';
 import Swal from 'sweetalert2';
@@ -24,15 +25,47 @@ export default function PaymentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<PaymentStatus | 'all'>('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [payments, setPayments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const itemsPerPage = 10;
 
-  const filteredPayments = mockPayments.filter((payment) => {
+  useEffect(() => {
+    loadPayments();
+  }, []);
+
+  const loadPayments = async () => {
+
+    setLoading(true);
+
+    const response = await paymentService.getPaymentDetails();
+
+    if (response.success && response.data) {
+      setPayments(response.data);
+    }
+
+    setLoading(false);
+  };
+
+  const filteredPayments = payments.filter((payment) => {
+
     const matchesSearch =
       !searchQuery ||
-      payment.reference.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      payment.payerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      payment.payerPhone?.includes(searchQuery);
-    const matchesStatus = statusFilter === 'all' || payment.status === statusFilter;
+      payment.reference?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      payment.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      payment.customerPhone?.includes(searchQuery);
+
+    const matchesStatus =
+      statusFilter === 'all' ||
+      (
+        payment.status === 'Aprobado'
+          ? 'approved'
+          : payment.status === 'Rechazado'
+            ? 'rejected'
+            : payment.status === 'Pendiente'
+              ? 'pending'
+              : 'manual_review'
+      ) === statusFilter;
+
     return matchesSearch && matchesStatus;
   });
 
@@ -84,6 +117,16 @@ export default function PaymentsPage() {
     });
   };
 
+  if (loading) {
+    return (
+      <MainLayout title="Gestión de Pagos SINPE">
+        <div className="flex justify-center items-center h-96">
+          Cargando pagos...
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout title="Gestión de Pagos SINPE">
       <div className="space-y-6">
@@ -93,7 +136,7 @@ export default function PaymentsPage() {
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground">Pendientes</p>
               <p className="text-2xl font-bold text-warning">
-                {mockPayments.filter((p) => p.status === 'pending').length}
+                {payments.filter((p) => p.status === 'Pendiente').length}
               </p>
             </CardContent>
           </Card>
@@ -101,7 +144,7 @@ export default function PaymentsPage() {
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground">Aprobados</p>
               <p className="text-2xl font-bold text-success">
-                {mockPayments.filter((p) => p.status === 'approved').length}
+                {payments.filter((p) => p.status === 'Aprobado').length}
               </p>
             </CardContent>
           </Card>
@@ -109,7 +152,7 @@ export default function PaymentsPage() {
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground">Rechazados</p>
               <p className="text-2xl font-bold text-destructive">
-                {mockPayments.filter((p) => p.status === 'rejected').length}
+                {payments.filter((p) => p.status === 'Rechazado').length}
               </p>
             </CardContent>
           </Card>
@@ -117,7 +160,7 @@ export default function PaymentsPage() {
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground">En Revisión</p>
               <p className="text-2xl font-bold text-info">
-                {mockPayments.filter((p) => p.status === 'manual_review').length}
+                {payments.filter((p) => p.status === 'Revisión Manual').length}
               </p>
             </CardContent>
           </Card>
@@ -199,10 +242,10 @@ export default function PaymentsPage() {
                       </td>
                       <td className="py-4 px-4">
                         <div>
-                          <p className="font-medium">{payment.payerName || 'N/A'}</p>
-                          {payment.payerPhone && (
+                          <p className="font-medium">{payment.customerName || 'N/A'}</p>
+                          {payment.customerPhone && (
                             <p className="text-sm text-muted-foreground">
-                              {formatPhoneNumber(payment.payerPhone)}
+                              {formatPhoneNumber(payment.customerPhone)}
                             </p>
                           )}
                         </div>
@@ -211,19 +254,29 @@ export default function PaymentsPage() {
                         <span className="font-semibold">{formatCurrency(payment.amount)}</span>
                       </td>
                       <td className="py-4 px-4 text-sm text-muted-foreground">
-                        {formatDate(payment.createdAt)}
+                        {formatDate(payment.paymentDate)}
                       </td>
                       <td className="py-4 px-4">
-                        <StatusBadge status={payment.status} />
+                        <StatusBadge
+                          status={
+                            payment.status === 'Aprobado'
+                              ? 'approved'
+                              : payment.status === 'Rechazado'
+                                ? 'rejected'
+                                : payment.status === 'Pendiente'
+                                  ? 'pending'
+                                  : 'manual_review'
+                          }
+                        />
                       </td>
                       <td className="py-4 px-4">
                         <p className="text-sm text-muted-foreground truncate max-w-[200px]">
-                          {payment.validationResult || 'Pendiente'}
+                          {payment.verificationResult || 'Pendiente'}
                         </p>
                       </td>
                       <td className="py-4 px-4 text-right">
                         <div className="flex justify-end gap-2">
-                          {payment.status === 'manual_review' && (
+                          {payment.status === 'Revisión Manual' && (
                             <>
                               <Button
                                 variant="ghost"

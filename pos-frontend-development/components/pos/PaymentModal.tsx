@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { connection } from '@/services/signalrService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency, formatPhoneNumber } from '@/utils/formatters';
@@ -36,27 +37,56 @@ export function PaymentModal({ isOpen, onClose, orderNumber }: PaymentModalProps
 
   const reference = `${orderNumber}-${Date.now().toString().slice(-6)}`;
 
-  // Simulate payment status polling
   useEffect(() => {
-    if (!isOpen || paymentStatus !== 'pending') return;
 
-    const interval = setInterval(() => {
-      setPollingCount((prev) => {
-        const newCount = prev + 1;
-        
-        // Simulate random payment detection after some polls
-        if (newCount > 5 && Math.random() > 0.7) {
-          const statuses: PaymentStatus[] = ['approved', 'rejected', 'manual_review'];
-          const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
-          setPaymentStatus(randomStatus);
+  if (!isOpen) return;
+
+  const connectSignalR = async () => {
+
+    try {
+
+      if (connection.state === 'Disconnected') {
+        await connection.start();
+      }
+
+      await connection.invoke(
+        'JoinOrderGroup',
+        orderNumber
+      );
+
+      connection.off('PaymentConfirmed');
+
+      connection.on(
+        'PaymentConfirmed',
+        (data) => {
+
+          console.log('Pago recibido:', data);
+
+          setPaymentStatus('approved');
         }
-        
-        return newCount;
-      });
-    }, 2000);
+      );
 
-    return () => clearInterval(interval);
-  }, [isOpen, paymentStatus]);
+    } catch (error) {
+
+      console.error(
+        'Error conectando SignalR',
+        error
+      );
+    }
+  };
+
+  connectSignalR();
+
+  return () => {
+
+    connection.off('PaymentConfirmed');
+
+  };
+
+}, [isOpen, orderNumber]);
+
+  // Simulate payment status polling
+
 
   const handleCopyNumber = async () => {
     await navigator.clipboard.writeText(sinpeConfig.phoneNumber.replace('-', ''));

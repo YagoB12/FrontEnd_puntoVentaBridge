@@ -12,7 +12,7 @@ export const paymentService = {
         page: page.toString(),
         pageSize: pageSize.toString(),
       });
-      
+
       if (filters?.status) params.append('status', filters.status);
       if (filters?.dateFrom) params.append('dateFrom', filters.dateFrom);
       if (filters?.dateTo) params.append('dateTo', filters.dateTo);
@@ -67,6 +67,28 @@ export const paymentService = {
       return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: getErrorMessage(error) };
+    }
+  },
+
+  // Método adicional para obtener detalles de pagos desde el endpoint específico
+  async getPaymentDetails(): Promise<ApiResponse<any[]>> {
+
+    try {
+
+      const response = await api.get('/sms/payments/details');
+
+      return {
+        success: true,
+        data: response.data,
+      };
+
+    } catch (error) {
+
+      return {
+        success: false,
+        error: getErrorMessage(error),
+      };
+
     }
   },
 };
