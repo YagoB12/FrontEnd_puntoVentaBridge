@@ -10,6 +10,7 @@ import {
   ClipboardList,
   CreditCard,
   Smartphone,
+  MessageSquare,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -51,6 +52,11 @@ const navItems: NavItem[] = [
     label: 'Monitor',
     adminOnly: true,
   },
+  {
+    href: '/sms',
+    icon: <MessageSquare className="h-5 w-5" />,
+    label: 'Simulador SMS',
+  }
 ];
 
 export function Sidebar() {
